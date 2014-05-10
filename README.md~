@@ -1,0 +1,273 @@
+<h1>Kaggle: Show of Hands -- Predicting Happiness</h1>
+
+<h2>Introduction</h2>
+Recently, I got to compete in my first <a href='www.kaggle.com' target='_blank'>Kaggle</a> competition. It was a private competition for students taking the Analytics Edge course on <a href='www.edx.org' target='_blank'>EdX</a>.
+
+It was an exhilarating learning experience. The goal of the competition was to predict whether poll respondents were happy or unhappy. The data was collected and distributed for the competition by a polling app called <a href='http://www.showofhands.mobi/' target='_blank'>Show of Hands</a>.
+
+The data comprised of the following demographic information:
+year of birth<br />
+gender<br />
+income<br />
+household status<br />
+education level<br />
+party preference<br />
+
+In addition, the data contained poll respondents' answers to 101 questions with binary answers. For example:<br />
+Are you good at math?<br />
+Have you cried in the past 60 days?<br />
+Do you brush your teeth two or more times every day?<br />
+Mac or PC?<br />
+Do you drink the unfiltered tap water in your home?<br />
+Were you an obedient child?<br />
+Do you personally own a gun?<br />
+
+The first few rows and columns of the sample data are shown below.
+    > head(initial_train_test.original)
+      UserID  YOB Gender             Income  HouseholdStatus        EducationLevel       Party Happy Q124742 Q124122 Q123464 Q123621 Q122769 Q122770 Q122771
+    1      1 1938   Male               <NA> Married (w/kids)                  <NA> Independent     1      No    <NA>      No      No      No     Yes  Public
+    2      2 1985 Female  $25,001 - $50,000 Single (no kids)       Master's Degree    Democrat     1    <NA>     Yes      No     Yes      No      No  Public
+    3      5 1963   Male      over $150,000 Married (w/kids)                  <NA>        <NA>     0      No     Yes      No     Yes      No      No Private
+    4      6 1997   Male $75,000 - $100,000 Single (no kids)   High School Diploma  Republican     1    <NA>     Yes     Yes      No    <NA>     Yes Private
+    5      7 1996   Male  $50,000 - $74,999 Single (no kids)          Current K-12        <NA>     1      No      No      No      No     Yes     Yes  Public
+    6      8 1991 Female      under $25,000 Single (no kids) Current Undergraduate        <NA>     1     Yes     Yes      No    <NA>    <NA>    <NA>  Public
+
+A significant portion (about a quarter) of the data was missing (marked yellow).
+!Alt_text(./figures/missingDataMap.png)
+
+<h2>First Approach</h2>
+
+<h3>1. Data Pre-processing</h3>
+First, I created a new column Age, using the YOB (year of birth) column. I then removed the UserID column in the initial
+
+I could easily spot that there were obvious invalid data entries. People with "negative" numbers for their ages, people over 100, etc. I decided to just remove them commpletely.
+
+    > train_test <- subset(train_test.original, Age > 13 & Age < 100)
+    > final_test <- subset(final_test.original, Age > 13 & Age < 100)
+
+As for those missing values, my first reaction was imputation. I utilized complete() and mice() functions in the <strong>mice</strong> package.
+
+    library(mice)
+
+    > # for the train_test dataset
+    > set.seed(123)
+    > train_test.dep <- subset(train_test, select=Happy)
+    > train_test.indep <- subset(train_test, select=-Happy)
+    > train_test.indep.imputed <- complete(mice(train_test.indep))
+    > train_test.imputed <- cbind(train_test.dep, train_test.indep.imputed)
+
+    # for the final_test dataset
+    > set.seed(123)
+    > final_test.imputed <- complete(mice(final_test))
+
+<h3>2. Data Modeling</h3>
+I decided to test several prediction models to see which performed the best: logistic regression model, regression tree model with 10-fold validation, random forest model, linear discriminant model, and quadratic discriminant model.
+
+I decided to use all variables to build my models, but really, I should have only selected variables that were helpful for predicting poll respondents' happiness. The number of variables used to build models was reduced in the second approach.
+
+<h6>Considering data transformation</h6>
+There were two continuous variables in the initial training/testing set: Age and votes columns. I considered data transformation but it didn't seem necessary. The data wasn't too skewed and was "normal enough".
+
+    > hist(train_test$Age)
+    > hist(train_test$votes) 
+
+    > library(psych)
+    > describe(train_test$Age)
+      var    n  mean    sd median trimmed   mad min max range skew kurtosis   se
+    1   1 3927 34.87 15.17     32   33.38 16.31  14  82    68  0.7    -0.38 0.24
+    > describe(train_test$votes)
+      var    n  mean    sd median trimmed   mad min max range  skew kurtosis   se
+    1   1 3927 75.01 27.39     87   78.14 20.76  20 101    81 -0.69    -1.01 0.44
+
+<h6>Spliting data into training and testing sets</h6>
+
+    > library(caTools)
+    > set.seed(123)
+    > split <- sample.split(train_test$Happy, SplitRatio=0.75)
+    > train <- train_test[split==TRUE, ]
+    > test <- train_test[split==FALSE, ]
+    > nrow(train)
+    [1] 2946
+    > nrow(test)
+    [1] 981
+
+<h6>Baseline model</h6> 
+
+    > table(test$Happy)
+
+      0   1 
+    428 553 
+    > 553 / (428 + 553)  # 56.37% accuracy on test
+    [1] 0.5637105
+
+<h6>Logistic regression model</h6>
+
+    > logModel <- glm(Happy ~ ., data = train, family = binomial)  
+    > predPerc.logModel.test <- predict(logModel, newdata = test, type = 'response')
+    > pred.logModel.test <- ifelse(predPerc.logModel.test > 0.5, 1, 0)
+    > table(pred.logModel.test, test$Happy)
+
+    pred.logModel.test   0   1
+		     0 242 143
+		     1 186 410
+
+<h6>Regression tree</h6>
+    > library(rpart)  # for rpart()
+    > library(rpart.plot)  # for prp()
+    > 
+    > CARTmodel <- rpart(Happy ~ ., data = train, method = 'class')
+    > prp(CARTmodel, varlen=0)  # varlen=0 instructs prp() to use full variable names
+
+    > predPerc.CARTmodel.test <- predict(CARTmodel, newdata = test)[ , 2]
+    > pred.CARTmodel.test <- ifelse(predPerc.CARTmodel.test > 0.45, 1, 0)
+    > table(pred.CARTmodel.test, test$Happy)
+
+    pred.CARTmodel.test   0   1
+		      0 183 100
+		      1 245 453
+
+<h6>Random forest</h6>
+
+    > library(randomForest)
+    > train$Happy <- as.factor(train$Happy)
+    > test$Happy <- as.factor(test$Happy)
+    > set.seed(123)
+    > RFmodel <- randomForest(Happy ~ ., data = train, ntrees=200)
+    > predPerc.RFmodel.test <- predict(RFmodel, newdata = test, type = 'prob')[ , 2]
+    > pred.RFmodel.test <- ifelse(predPerc.RFmodel.test > 0.5, 1, 0)
+    > table(pred.RFmodel.test, test$Happy)
+
+    pred.RFmodel.test   0   1
+		    0 209  99
+		    1 219 454
+
+<h6>Regression tree with 10-fold cross-validation</h6>
+Loading necessary libraries:
+    > library(caret)  # for cross-validation
+    > library(e1071)  # for cross-validation
+
+Cross-validating to find the complex parameter (cp): 
+    > trControl <- trainControl(method = 'cv', number = 10)
+    > tuneGrid <- expand.grid(.cp = (1:50) * 0.01)
+    > set.seed(123)
+    > train(Happy ~ ., 
+    +       data = train, 
+    +       method = 'rpart', 
+    +       trControl = trControl,
+    +       tuneGrid = tuneGrid)
+
+Building a model and making predictions:
+    > cv10CARTmodel <- rpart(Happy ~ ., data = train, cp = 0.01)
+    > predPerc.cv10CARTmodel.test <- predict(cv10CARTmodel, newdata = test)[ , 2]
+    > pred.cv10CARTmodel.test <- ifelse(predPerc.cv10CARTmodel.test > 0.45, 1, 0)
+    > table(pred.cv10CARTmodel.test, test$Happy)
+
+    pred.cv10CARTmodel.test   0   1
+			  0 183 100
+			  1 245 453
+
+<h6>Linear discriminant analysis</h6>
+
+    > library(MASS)  # for lda()
+    > LDAmodel <- lda(Happy ~ ., data = train)
+    Warning message:
+    In lda.default(x, grouping, ...) : variables are collinear
+    > predPerc.LDAmodel.test <- predict(LDAmodel, newdata = test)$posterior[ , 2]
+    > pred.LDAmodel.test <- ifelse(predPerc.LDAmodel.test > 0.5, 1, 0)
+    > table(pred.LDAmodel.test, test$Happy)
+
+    pred.LDAmodel.test   0   1
+		     0 244 141
+		     1 184 412
+
+
+<h3>3. Clustering and Modeling</h3>
+One technique discussed for improving prediction accuracies is clustering and modeling. By clustering the training data, the prediction models deal with less variance and more similar data points, which purportedly improves accuracy.
+
+CODE
+
+<h3>4. Model Averaging</h3>
+
+
+<h3>5. Performance Overview</h3>
+<h6>No clustering</h6>
+GLM accuracy:
+RT accuracy:
+RF accuracy:
+LDA accuracy:
+Probabilities averaged:
+Frequent outcomes picked:
+
+<h6>2-group clustering</h6>
+GLM accuracy:
+RT accuracy:
+RF accuracy:
+LDA accuracy:
+
+<h6>7-group clustering</h6>
+GLM accuracy:
+RT accuracy:
+RF accuracy:
+LDA accuracy:
+
+
+<h2>Second Approach</h2>
+
+<h3>1. Data Pre-processing</h3>
+First
+
+This time, instead of imputing for missing data, I decided to code the missing cells with a unique categorical value, "Skipped."
+
+<h3>2. Selecting Significant Variables with ANOVA</h3>
+Another approach I took to improve the prediction accuracies of my models was selecting important variables. This is a crucial step. Excluding unimportant variables not only reduces computational burden (which can be notable in case of significant multicolinearity) but also avoids potential overfitting.
+
+<h3>3. Data Modeling</h3>
+As before, I decided to test several prediction models to measure and compare their performances: logistic regression model, regression tree model with 10-fold validation, random forest, and linear discriminant analysis.
+
+<h3>3. Modeling Averaging</h3>
+
+<h3>4. Model Performance Assessment</h3>
+<h6>61 variables</h6>
+GLM accuracy: 68.4%
+RT accuracy: 64.72%
+RF accuracy: 68.11%
+LDA accuracy: 68.12%
+predProb-averaged accuracy: 69.19%
+frequency accuracy: 68.47%
+
+<h6>8 variables</h6>
+GLM accuracy: 66.52%
+RT accuracy: 65.08%
+RF accuracy: 65.87%
+LDA accuracy: 66.67%
+predProb-averaged accuracy: 66.81%
+frequency accuracy: # 66.59%
+
+<h6>17 variables</h6>
+GLM accuracy: 67.75%
+RT accuracy: 64.72%
+RF accuracy: 66.81%
+LDA accuracy: 68.25%
+predProb-averaged accuracy: 67.68%
+frequency accuracy: 68.47%
+
+
+<h2>Conclusion</h2>
+There are several lessons I've learned from participating in this competition.<br />
+
+1. Do <strong>NOT</strong> always impute all missing values. Imputing missing values inevitably creates errors. If one tries to impute missing values in Column A, and impute missing values in Column B using A and other variables, the errors incurred from imputing Column A is going to propagate to Column B.<br />
+
+Therefore, the reasoning goes, one should impute for missing values only for:<br />
+a. The most important variables to your final model<br />
+b. The variables with the least number of missing values<br />
+c. The variables that you can impute with a minimal error<br />
+
+2. Do <strong>NOT</strong> put all independent variables when creating a prediction model. Pick out the most important variables by pre-selecting them. One can further remove variables by removing variables that are highly colinear (usually around r > 0.75). Another technique of selecting important variables for building prediction models is plotting their importance as recognized by random forest as we did above.
+
+3. Clustering-and-prediction can actually decrease the accuracy rate, as we saw in our case. This could have been very well due to the fact we did not have enough observations to split our data into clusters. With less data in each cluster, we had less data with which we could train our models--therefore a drop in the accuracy of the models.
+
+4. Model averaging is a simple yet powerful technique. Instead of making predictions based on a single prediction model, one should combine outputs (whether they be actual predicted outcomes or prediction probabilities) from different prediction models. 
+
+This ensemble technique works best if models are vastly different each other. Averaging a pack of nearly identical models (logistic model with another logistic model, or random forest model with a regression tree model, etc.) will hardly improve the accuracy. 
+
+5. Most importantly, have fun. Kaggle is a great platform for data enthusiathiasts to practice, learn, and compete.
