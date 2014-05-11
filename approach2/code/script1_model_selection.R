@@ -92,7 +92,7 @@ library(e1071)
 
 set.seed(123)
 trainControl <- trainControl('cv', 10)
-tuneGrid <- expand.grid(.cp = (1:100 * 0.01))
+tuneGrid <- expand.grid(.cp = (1:30 * 0.01))
 train(formula, data = initial_train, method = 'rpart', 
       trControl = trainControl, tuneGrid = tuneGrid)
 

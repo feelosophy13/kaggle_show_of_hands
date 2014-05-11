@@ -6,12 +6,14 @@ Recently, I got to compete in my first <a href='www.kaggle.com' target='_blank'>
 It was an exhilarating learning experience. The goal of the competition was to predict whether poll respondents were happy or unhappy. The data was collected and distributed for the competition by a polling app called <a href='http://www.showofhands.mobi/' target='_blank'>Show of Hands</a>.
 
 The data comprised of the following demographic information:
-year of birth<br />
-gender<br />
-income<br />
-household status<br />
-education level<br />
-party preference<br />
+<ul>
+<li>year of birth</li>
+<li>gender</li>
+<li>income</li>
+<li>household status</li>
+<li>education level</li>
+<li>party preference</li>
+</ul>
 
 In addition, the data contained poll respondents' answers to 101 questions with binary answers. For example:<br />
 <ul>
@@ -36,7 +38,7 @@ The first few rows and columns of the sample data are shown below.
     6      8 1991 Female      under $25,000 Single (no kids) Current Undergraduate        <NA>     1     Yes     Yes      No    <NA>    <NA>    <NA>  Public
 
 A significant portion (about a quarter) of the data was missing (marked yellow).
-!Alt_text(./figures/missingDataMap.png)
+!Alttext(./figures/missingDataMap.png)
 
 <h2>First Approach</h2>
 
@@ -480,20 +482,25 @@ Similarly, other models (logistic regression, LDA, and regression tree with 10-f
 
 <h3>5. Performance Overview</h3>
 <h6>No clustering</h6>
-GLM accuracy: 66.46%<br />
-RT accuracy: 64.83%<br />
-RF accuracy: 67.58%<br />
-LDA accuracy: 66.87%<br />
-Probabilities averaged (GLM + RF + LDA): 68.09%<br />
-Frequent outcome picked (GLM + RF + LDA): 68.09%<br />
+<ul>
+<li>GLM accuracy: 66.46%</li>
+<li>RT accuracy: 64.83%</li>
+<li>RF accuracy: 67.58%</li>
+<li>LDA accuracy: 66.87%</li>
+<li>Probabilities averaged (GLM + RF + LDA): 68.09%</li>
+<li>Frequent outcome picked (GLM + RF + LDA): 68.09%</li>
+</ul>
 
 <h6>2-group clustering</h6>
-GLM accuracy: 65.85%<br />
-RT accuracy: 65.95%<br />
-RF accuracy: 67.89%<br />
-LDA accuracy: 43.63%<br />
-Probabilities averaged (GLM + RF): 66.97%<br />
-Frequent outcome picked (GLM + RF): 67.89%<br />
+
+<ul>
+<li>GLM accuracy: 65.85%</li>
+<li>RT accuracy: 65.95%</li>
+<li>RF accuracy: 67.89%</li>
+<li>LDA accuracy: 43.63%</li>
+<li>Probabilities averaged (GLM + RF): 66.97%</li>
+<li>Frequent outcome picked (GLM + RF): 67.89%</li>
+</ul>
 
 <h2>Second Approach</h2>
 
@@ -505,10 +512,10 @@ First, as I did in my first approach, I created a new variable Age.
 
 Instead of removing observations with invalid age information, I changed the cell values for age and year of birth to NA.
 
-> initial_train_test$Age[initial_train_test$Age > 100 | initial_train_test$Age < 10] <- NA
-> initial_train_test$YOB[initial_train_test$Age > 100 | initial_train_test$Age < 10] <- NA
-> final_test$Age[final_test$Age > 100 | final_test$Age < 10] <- NA
-> final_test$YOB[final_test$Age > 100 | final_test$Age < 10] <- NA
+    > initial_train_test$Age[initial_train_test$Age > 100 | initial_train_test$Age < 10] <- NA
+    > initial_train_test$YOB[initial_train_test$Age > 100 | initial_train_test$Age < 10] <- NA
+    > final_test$Age[final_test$Age > 100 | final_test$Age < 10] <- NA
+    > final_test$YOB[final_test$Age > 100 | final_test$Age < 10] <- NA
 
 In addition, I created a new categorical variable, AgeGroup.
 
@@ -599,39 +606,272 @@ Then, I ran the function.
     [55] "Q96024"          "Q111848"         "Q119851"         "Q118233"         "Q119650"         "UserID"         
     [61] "Q108950"         "Q102674"     
 
-Looking at the list, I saw that UserID was listed as one of the "significant" variables for predicting happiness. Intuitively, that was non-sense. However, 
+Looking at the list, I saw that UserID was listed as one of the "significant" variables for predicting happiness. Intuitively, that was non-sense. However, understanding how ANOVA works and how the function was written, it made sense. The output was suggesting that there exists a significant difference in happiness among difference users (who share separate user IDs). Because we coudn't infer anything about a user from his/her user ID in the test dataset, I removed the UserID variable, which left us with 61 "significant" variables (reduced from the original dataset's 110 independent variables).
 
+Instead of manually typing in all 61 variables, I wrote a function that can take the sigVars object and convert to a formula string, which could easily be converted to a formula object.
+
+    > createFormulaStr <- function(sigVariables) {
+    +   formula <- 'Happy~'
+    +   for (var.name in sigVariables) {
+    +     formula <- paste(formula, var.name, '+', sep='')
+    +   }
+    +   formula <- substr(formula, 1, nchar(formula) - 1)
+    + }
+    > 
+    > formulaStr <- createFormulaStr(sigVars)
+    > formula <- as.formula(formulaStr)
+    > formula
+    Happy ~ Q118237 + Q101162 + Q107869 + Q102289 + Q98869 + Q102906 + 
+	Q106997 + HouseholdStatus + Q108855 + Q119334 + Q115610 + 
+	Q108856 + Q120014 + Q108343 + Q116197 + Q98197 + Q116448 + 
+	Q102687 + Q114961 + Q108342 + Q113181 + Income + Q117186 + 
+	Party + Q115390 + Q112512 + Q102089 + Q116953 + Q115611 + 
+	Q121011 + Q111580 + Q99716 + Q106993 + Q109367 + Q114152 + 
+	Q106389 + Q116441 + Q123621 + Q113584 + Q124742 + Q108617 + 
+	Q116881 + Q117193 + Q100689 + Q115602 + Q98578 + Q120012 + 
+	Q100680 + Q112478 + Q106272 + Q99982 + Q109244 + Q98059 + 
+	EducationLevel + Q96024 + Q111848 + Q119851 + Q118233 + Q119650 + 
+	UserID + Q108950 + Q102674  
 
 <h3>3. Data Modeling</h3>
 As before, I decided to test several prediction models to measure and compare their performances: logistic regression model, regression tree model with 10-fold validation, random forest, and linear discriminant analysis.
 
-<h3>3. Modeling Averaging</h3>
+<h6>Logistic regression</h6>
+
+Accuracy: 68.4%
+
+    > logModel <- glm(formula, data = initial_train, family = binomial)
+    > predProb.logModel.initial_test <- predict(logModel, newdata = initial_test, type = 'response')
+    > pred.logModel.initial_test <- as.integer(predProb.logModel.initial_test > 0.5)
+    > table(pred.logModel.initial_test, initial_test$Happy)
+    > table(pred.logModel.initial_test, initial_test$Happy)
+
+    pred.logModel.initial_test   0   1
+			     0 358 191
+			     1 247 590
+
+<h6>Regression tree with 10-fold cross-validation</h6>
+
+Accuracy: 64.72%
+
+    > library(rpart)
+    > library(rpart.plot)
+    > library(caret)
+    > library(e1071)
+    > 
+    > set.seed(123)
+    > trainControl <- trainControl('cv', 10)
+    > tuneGrid <- expand.grid(.cp = (1:30 * 0.01))
+    > train(formula, data = initial_train, method = 'rpart', 
+    +       trControl = trainControl, tuneGrid = tuneGrid)
+
+    .
+    .
+    .
+
+    RMSE was used to select the optimal model using  the smallest value.
+    The final value used for the model was cp = 0.01. 
+
+    > CARTmodel <- rpart(formula, data = initial_train, cp = 0.01, method = 'class')
+    > predProb.CARTmodel.initial_test <- predict(CARTmodel, newdata = initial_test)[ , 2]
+    > pred.CARTmodel.initial_test <- as.integer(predProb.CARTmodel.initial_test > 0.5)
+    > table(pred.CARTmodel.initial_test, initial_test$Happy)
+
+    pred.CARTmodel.initial_test   0   1
+			      0 267 151
+			      1 338 630
+
+<h6>Random forest</h6>
+
+Accuracy: 68.11%
+
+    > initial_train$Happy <- factor(initial_train$Happy)
+    > initial_test$Happy <- factor(initial_test$Happy)
+    > set.seed(123)
+    > RFmodel <- randomForest(formula, data = initial_train, ntrees = 200)
+    > predProb.RFmodel.initial_test <- predict(RFmodel, newdata = initial_test, type = 'prob')[ , 2]
+    > pred.RFmodel.initial_test <- as.integer(predProb.RFmodel.initial_test > 0.5)
+    > table(pred.RFmodel.initial_test, initial_test$Happy)
+
+    pred.RFmodel.initial_test   0   1
+			    0 326 163
+			    1 279 618
+
+<h6>Linear discriminant analysis</h6>
+
+Accuracy: 68.12%
+
+    > library(MASS)
+    > LDAmodel <- lda(formula, data = initial_train)
+    > predProb.LDAmodel.initial_test <- predict(LDAmodel, newdata = initial_test)$posterior[ , 2]
+    > pred.LDAmodel.initial_test <- as.integer(predProb.LDAmodel.initial_test > 0.5)
+    > table(pred.LDAmodel.initial_test, initial_test$Happy)
+
+    pred.LDAmodel.initial_test   0   1
+			     0 349 186
+			     1 256 595
+
+<h6>Averaging prediction probabilities to make predictions</h6>
+
+Accuracy: 69.19%
+
+    > predProb.averaged.initial_test <- 
+    +   (predProb.logModel.initial_test + 
+    +      predProb.RFmodel.initial_test + 
+    +      predProb.LDAmodel.initial_test) / 3
+    > pred.averaged.initial_test <- as.integer(predProb.averaged.initial_test > 0.5)
+    > table(pred.averaged.initial_test, initial_test$Happy)
+
+    pred.averaged.initial_test   0   1
+			     0 355 177
+			     1 250 604
+
+<h6>Selecting more frequent outcomes to make predictions</h6>
+
+Accuracy: 68.47%
+
+    > predProb.freq.initial_test <- (pred.logModel.initial_test + 
+    +                                  pred.RFmodel.initial_test + 
+    +                                  pred.LDAmodel.initial_test) / 3
+    > pred.freq.initial_test <- round(predProb.freq.initial_test, 0)
+    > table(pred.freq.initial_test, initial_test$Happy)
+
+    pred.freq.initial_test   0   1
+			 0 355 187
+			 1 250 594
+
+<h3>3. Selecting 17 most significant variables out of 61</h3>
+
+<h6>Plotting 25 important variables (according to random forest)</h6>
+
+![Alt text](./figures/varImpPlot_25vars.png)
+
+> varImpPlot(RFmodel, n.var = 25, 
++            main = 'Importance of Variables',
++            cex = 0.7)  # cex controls the size of label texts
+
+<h6>Pick the first 17 variables</h6>
+
+    > formula.17vs <- as.formula('Happy ~ EducationLevel + Income + Q118237 + Party + 
+    +                            HouseholdStatus + Q101162 + Q107869 + Q119334 + 
+    +                            Q124742 + Q108855 + Q102289 + Q121011 + Q98869 + 
+    +                            Q123621 + Q120014 + Q102906 + Q106997')
+
+<h6>Logistic regression</h6>
+
+Accuracy: 67.75%
+
+    > logModel17vs <- glm(formula.17vs, data = initial_train, family = binomial)
+    > predProb.logModel17vs.initial_test <- predict(logModel17vs, newdata = initial_test, type = 'response')
+    > pred.logModel17vs.initial_test <- as.integer(predProb.logModel17vs.initial_test > 0.5)
+    > table(pred.logModel17vs.initial_test, initial_test$Happy)
+
+    pred.logModel17vs.initial_test   0   1
+				 0 337 179
+				 1 268 602
+
+<h6>Regression tree</h6>
+
+Accuracy: 64.72%
+
+    > set.seed(123)
+    > trainControl <- trainControl('cv', 10)
+    > tuneGrid <- expand.grid(.cp = (1:50 * 0.01))
+    > train(formula.17vs, data = initial_train, method = 'rpart', 
+    +       trControl = trainControl, tuneGrid = tuneGrid)
+
+    .
+    .
+    .
+
+    RMSE was used to select the optimal model using  the smallest value.
+    The final value used for the model was cp = 0.01. 
+
+    > CARTmodel17vs <- rpart(formula.17vs, data = initial_train, cp = 0.01, method = 'class')
+    > predProb.CARTmodel17vs.initial_test <- predict(CARTmodel17vs, newdata = initial_test)[ , 2]
+    > pred.CARTmodel17vs.initial_test <- as.integer(predProb.CARTmodel17vs.initial_test > 0.5)
+    > table(pred.CARTmodel17vs.initial_test, initial_test$Happy)
+
+    pred.CARTmodel17vs.initial_test   0   1
+				  0 267 151
+				  1 338 630
+
+<h6>Random forest</h6>
+
+Accuracy: 66.81%
+
+    > set.seed(123)
+    > RFmodel17vs <- randomForest(formula.17vs, data = initial_train, ntrees = 200)
+    > predProb.RFmodel17vs.initial_test <- predict(RFmodel17vs, newdata = initial_test, type = 'prob')[ , 2]
+    > pred.RFmodel17vs.initial_test <- as.integer(predProb.RFmodel17vs.initial_test > 0.5)
+    > table(pred.RFmodel17vs.initial_test, initial_test$Happy)
+
+    pred.RFmodel17vs.initial_test   0   1
+				0 330 185
+				1 275 596
+
+<h6>Linear discriminant analysis</h6>
+
+Accuracy: 68.25%
+
+    > LDAmodel17vs <- lda(formula.17vs, data = initial_train)
+    > predProb.LDAmodel17vs.initial_test <- predict(LDAmodel17vs, newdata = initial_test)$posterior[ , 2]
+    > pred.LDAmodel17vs.initial_test <- as.integer(predProb.LDAmodel17vs.initial_test > 0.5)
+    > table(pred.LDAmodel17vs.initial_test, initial_test$Happy)
+
+    pred.LDAmodel17vs.initial_test   0   1
+				 0 336 171
+				 1 269 610
+
+<h6>Averaging prediction probabilities to make predictions</h6>
+
+Accuracy: 67.68%
+
+    > predProb.averaged17vs.initial_test <- 
+    +   (predProb.logModel17vs.initial_test + 
+    +      predProb.RFmodel17vs.initial_test + 
+    +      predProb.LDAmodel17vs.initial_test) / 3
+    > pred.averaged17vs.initial_test <- as.integer(predProb.averaged17vs.initial_test > 0.5)
+    > table(pred.averaged17vs.initial_test, initial_test$Happy)
+
+    pred.averaged17vs.initial_test   0   1
+				 0 337 180
+				 1 268 601
+
+<h6>Selecting more frequent outcomes to make predictions</h6>
+
+Accuracy: 68.47%
+
+    > predProb.freq17vs.initial_test <- (pred.logModel.initial_test + 
+    +                                      pred.RFmodel.initial_test + 
+    +                                      pred.LDAmodel.initial_test) / 3
+    > pred.freq17vs.initial_test <- round(predProb.freq17vs.initial_test, 0)
+    > table(pred.freq17vs.initial_test, initial_test$Happy)
+
+    pred.freq17vs.initial_test   0   1
+			     0 355 187
+			     1 250 594
 
 <h3>4. Model Performance Assessment</h3>
 <h6>61 variables</h6>
-GLM accuracy: 68.4%
-RT accuracy: 64.72%
-RF accuracy: 68.11%
-LDA accuracy: 68.12%
-predProb-averaged accuracy: 69.19%
-frequency accuracy: 68.47%
-
-<h6>8 variables</h6>
-GLM accuracy: 66.52%
-RT accuracy: 65.08%
-RF accuracy: 65.87%
-LDA accuracy: 66.67%
-predProb-averaged accuracy: 66.81%
-frequency accuracy: # 66.59%
+<ul>
+<li>GLM accuracy: 68.4%</li>
+<li>RT accuracy: 64.72%</li>
+<li>RF accuracy: 68.11%</li>
+<li>LDA accuracy: 68.12%</li>
+<li>Probabilities averaged (GLM + RF + LDA): 69.19%</li>
+<li>Frequent outcome picked (GLM + RF + LDA): 68.47%</li>
+</ul>
 
 <h6>17 variables</h6>
-GLM accuracy: 67.75%
-RT accuracy: 64.72%
-RF accuracy: 66.81%
-LDA accuracy: 68.25%
-predProb-averaged accuracy: 67.68%
-frequency accuracy: 68.47%
-
+<ul>
+<li>GLM accuracy: 67.75%</li>
+<li>RT accuracy: 64.72%</li>
+<li>RF accuracy: 66.81%</li>
+<li>LDA accuracy: 68.25%</li>
+<li>Probabilities averaged: 67.68%</li>
+<li>Frequent outcome picked: 68.47%</li>
+</ul>
 
 <h2>Conclusion</h2>
 There are several lessons I've learned from participating in this competition.<br />

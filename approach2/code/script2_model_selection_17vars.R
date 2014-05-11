@@ -4,7 +4,8 @@
 varImpPlot(RFmodel, n.var = 25, 
            main = 'Importance of Variables',
            cex = 0.7)  # cex controls the size of label texts
-
+dev.copy(png, '../figures/varImpPlot_25vars.png')
+dev.off()
 
 
 #### save formula with 8 leading independent variables (from RF)
@@ -37,7 +38,7 @@ AUC.logModel17vs.initial_test  # 73.01%
 #### rebuild regression tree model with 17 most important variables picked from RF
 set.seed(123)
 trainControl <- trainControl('cv', 10)
-tuneGrid <- expand.grid(.cp = (1:100 * 0.01))
+tuneGrid <- expand.grid(.cp = (1:50 * 0.01))
 train(formula.17vs, data = initial_train, method = 'rpart', 
       trControl = trainControl, tuneGrid = tuneGrid)
 
