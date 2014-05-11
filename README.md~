@@ -14,16 +14,19 @@ education level<br />
 party preference<br />
 
 In addition, the data contained poll respondents' answers to 101 questions with binary answers. For example:<br />
-Are you good at math?<br />
-Have you cried in the past 60 days?<br />
-Do you brush your teeth two or more times every day?<br />
-Mac or PC?<br />
-Do you drink the unfiltered tap water in your home?<br />
-Were you an obedient child?<br />
-Do you personally own a gun?<br />
+<ul>
+<li>Are you good at math?</li>
+<li>Have you cried in the past 60 days?</li>
+<li>Do you brush your teeth two or more times every day?</li>
+<li>Mac or PC?</li>
+<li>Do you drink the unfiltered tap water in your home?</li>
+<li>Were you an obedient child?</li>
+<li>Do you personally own a gun?</li>
+</ul>
 
 The first few rows and columns of the sample data are shown below.
-    > head(initial_train_test.original)
+
+    > head(initial_train_test)
       UserID  YOB Gender             Income  HouseholdStatus        EducationLevel       Party Happy Q124742 Q124122 Q123464 Q123621 Q122769 Q122770 Q122771
     1      1 1938   Male               <NA> Married (w/kids)                  <NA> Independent     1      No    <NA>      No      No      No     Yes  Public
     2      2 1985 Female  $25,001 - $50,000 Single (no kids)       Master's Degree    Democrat     1    <NA>     Yes      No     Yes      No      No  Public
@@ -42,23 +45,33 @@ First, I created a new column Age, using the YOB (year of birth) column. I then 
 
 I could easily spot that there were obvious invalid data entries. People with "negative" numbers for their ages, people over 100, etc. I decided to just remove them commpletely.
 
-    > train_test <- subset(train_test.original, Age > 13 & Age < 100)
-    > final_test <- subset(final_test.original, Age > 13 & Age < 100)
+    > initial_train_test <- subset(initial_train_test, Age > 13 & Age < 100)
+    > final_test <- subset(final_test, Age > 13 & Age < 100)
 
 As for those missing values, my first reaction was imputation. I utilized complete() and mice() functions in the <strong>mice</strong> package.
 
-    library(mice)
+    > library(mice)
 
-    > # for the train_test dataset
+    > # for the initial_train_test dataset
     > set.seed(123)
-    > train_test.dep <- subset(train_test, select=Happy)
-    > train_test.indep <- subset(train_test, select=-Happy)
-    > train_test.indep.imputed <- complete(mice(train_test.indep))
-    > train_test.imputed <- cbind(train_test.dep, train_test.indep.imputed)
+    > initial_train_test.dep <- subset(initial_train_test, select=Happy)
+    > initial_train_test.indep <- subset(initial_train_test, select=-Happy)
+    > initial_train_test.indep.imputed <- complete(mice(initial_train_test.indep))
+    > initial_train_test.imputed <- cbind(initial_train_test.dep, 
+    +                                     initial_train_test.indep.imputed)
 
-    # for the final_test dataset
+    > # for the final_test dataset
     > set.seed(123)
     > final_test.imputed <- complete(mice(final_test))
+
+I saved the imputed datasets by exporting them as separate CSV files.
+
+    > write.csv(initial_train_test.imputed, 
+    +	        file='data/imputed/initial_train_test_imputed.csv',
+    + 	        row.names = FALSE)
+    > write.csv(final_test.imputed, 
+    +           file='data/imputed/final_test_imputed.csv',
+    +           row.names = FALSE)
 
 <h3>2. Data Modeling</h3>
 I decided to test several prediction models to see which performed the best: logistic regression model, regression tree model with 10-fold validation, random forest model, linear discriminant model, and quadratic discriminant model.
@@ -68,14 +81,14 @@ I decided to use all variables to build my models, but really, I should have onl
 <h6>Considering data transformation</h6>
 There were two continuous variables in the initial training/testing set: Age and votes columns. I considered data transformation but it didn't seem necessary. The data wasn't too skewed and was "normal enough".
 
-    > hist(train_test$Age)
-    > hist(train_test$votes) 
+    > hist(initial_train_test$Age)
+    > hist(initial_train_test$votes) 
 
     > library(psych)
-    > describe(train_test$Age)
+    > describe(initial_train_test$Age)
       var    n  mean    sd median trimmed   mad min max range skew kurtosis   se
     1   1 3927 34.87 15.17     32   33.38 16.31  14  82    68  0.7    -0.38 0.24
-    > describe(train_test$votes)
+    > describe(initial_train_test$votes)
       var    n  mean    sd median trimmed   mad min max range  skew kurtosis   se
     1   1 3927 75.01 27.39     87   78.14 20.76  20 101    81 -0.69    -1.01 0.44
 
@@ -83,17 +96,17 @@ There were two continuous variables in the initial training/testing set: Age and
 
     > library(caTools)
     > set.seed(123)
-    > split <- sample.split(train_test$Happy, SplitRatio=0.75)
-    > train <- train_test[split==TRUE, ]
-    > test <- train_test[split==FALSE, ]
-    > nrow(train)
+    > split <- sample.split(initial_train_test$Happy, SplitRatio=0.75)
+    > initial_train <- initial_train_test[split==TRUE, ]
+    > initial_test <- initial_train_test[split==FALSE, ]
+    > nrow(initial_train)
     [1] 2946
-    > nrow(test)
+    > nrow(initial_test)
     [1] 981
 
 <h6>Baseline model</h6> 
 
-    > table(test$Happy)
+    > table(initial_test$Happy)
 
       0   1 
     428 553 
@@ -101,92 +114,295 @@ There were two continuous variables in the initial training/testing set: Age and
     [1] 0.5637105
 
 <h6>Logistic regression model</h6>
+The logistic regression model yielded 66.46% accuracy on the initial test dataset.
 
-    > logModel <- glm(Happy ~ ., data = train, family = binomial)  
-    > predPerc.logModel.test <- predict(logModel, newdata = test, type = 'response')
-    > pred.logModel.test <- ifelse(predPerc.logModel.test > 0.5, 1, 0)
-    > table(pred.logModel.test, test$Happy)
+    > logModel <- glm(Happy ~ ., data = initial_train, family = binomial)
+    > predPerc.logModel.initial_test <- predict(logModel, newdata = initial_test, type = 'response')
+    > pred.logModel.initial_test <- ifelse(predPerc.logModel.initial_test > 0.5, 1, 0)
+    > table(pred.logModel.initial_test, initial_test$Happy)
 
-    pred.logModel.test   0   1
-		     0 242 143
-		     1 186 410
-
-<h6>Regression tree</h6>
-    > library(rpart)  # for rpart()
-    > library(rpart.plot)  # for prp()
-    > 
-    > CARTmodel <- rpart(Happy ~ ., data = train, method = 'class')
-    > prp(CARTmodel, varlen=0)  # varlen=0 instructs prp() to use full variable names
-
-    > predPerc.CARTmodel.test <- predict(CARTmodel, newdata = test)[ , 2]
-    > pred.CARTmodel.test <- ifelse(predPerc.CARTmodel.test > 0.45, 1, 0)
-    > table(pred.CARTmodel.test, test$Happy)
-
-    pred.CARTmodel.test   0   1
-		      0 183 100
-		      1 245 453
+    pred.logModel.initial_test   0   1
+			     0 242 143
+			     1 186 410
+ 
 
 <h6>Random forest</h6>
+The random forest model yielded 67.58% accuracy on the initial test dataset.
+
+Loading the library:
 
     > library(randomForest)
-    > train$Happy <- as.factor(train$Happy)
-    > test$Happy <- as.factor(test$Happy)
+
+Random forest requires the outcome variable to be a factor variable.
+
+    > initial_train$Happy <- as.factor(initial_train$Happy)
+    > initial_test$Happy <- as.factor(initial_test$Happy)
+
+Building the model and calculating the accuracy:
+
     > set.seed(123)
-    > RFmodel <- randomForest(Happy ~ ., data = train, ntrees=200)
-    > predPerc.RFmodel.test <- predict(RFmodel, newdata = test, type = 'prob')[ , 2]
-    > pred.RFmodel.test <- ifelse(predPerc.RFmodel.test > 0.5, 1, 0)
-    > table(pred.RFmodel.test, test$Happy)
+    > RFmodel <- randomForest(Happy ~ ., data = initial_train, ntrees=200)
+    > predPerc.RFmodel.initial_test <- predict(RFmodel, newdata = initial_test, type = 'prob')[ , 2]
+    > pred.RFmodel.initial_test <- ifelse(predPerc.RFmodel.initial_test > 0.5, 1, 0)
+    > table(pred.RFmodel.initial_test, initial_test$Happy)
 
-    pred.RFmodel.test   0   1
-		    0 209  99
-		    1 219 454
+    pred.RFmodel.initial_test   0   1
+			    0 209  99
+			    1 219 454
 
-<h6>Regression tree with 10-fold cross-validation</h6>
-Loading necessary libraries:
+<h6>Regression tree with 10-fold cross validation</h6>
+The regression tree model with 10-fold cross validation yielded 64.62% accuracy on the inital test dataset.
+
+Loading the necessary libraries:
+
+    > library(rpart)  # for rpart()
+    > library(rpart.plot)  # for prp()
     > library(caret)  # for cross-validation
     > library(e1071)  # for cross-validation
 
-Cross-validating to find the complex parameter (cp): 
+Finding complex parameter through training:
+
     > trControl <- trainControl(method = 'cv', number = 10)
     > tuneGrid <- expand.grid(.cp = (1:50) * 0.01)
     > set.seed(123)
-    > train(Happy ~ ., 
-    +       data = train, 
+    > train(Happy ~ . - YOB, 
+    +       data = initial_train, 
     +       method = 'rpart', 
     +       trControl = trControl,
     +       tuneGrid = tuneGrid)
 
-Building a model and making predictions:
-    > cv10CARTmodel <- rpart(Happy ~ ., data = train, cp = 0.01)
-    > predPerc.cv10CARTmodel.test <- predict(cv10CARTmodel, newdata = test)[ , 2]
-    > pred.cv10CARTmodel.test <- ifelse(predPerc.cv10CARTmodel.test > 0.45, 1, 0)
-    > table(pred.cv10CARTmodel.test, test$Happy)
+    .
+    .
+    .
 
-    pred.cv10CARTmodel.test   0   1
-			  0 183 100
-			  1 245 453
+    RMSE was used to select the optimal model using  the smallest value.
+    The final value used for the model was cp = 0.01. 
+
+Building the model and calculating the accuracy:
+
+    > CARTmodel <- rpart(Happy ~ ., data = initial_train, cp = 0.01)
+    > predPerc.CARTmodel.initial_test <- predict(CARTmodel, newdata = initial_test)
+    > pred.CARTmodel.initial_test <- ifelse(predPerc.CARTmodel.initial_test > 0.5, 1, 0)
+    > table(pred.CARTmodel.initial_test, initial_test$Happy)
+
+    pred.CARTmodel.initial_test   0   1
+			      0 149  68
+			      1 279 485
+
 
 <h6>Linear discriminant analysis</h6>
 
+The LDA model yielded 66.87% accuracy on the initial test dataset. 
+
     > library(MASS)  # for lda()
-    > LDAmodel <- lda(Happy ~ ., data = train)
+    > LDAmodel <- lda(Happy ~ ., data = initial_train)
     Warning message:
     In lda.default(x, grouping, ...) : variables are collinear
-    > predPerc.LDAmodel.test <- predict(LDAmodel, newdata = test)$posterior[ , 2]
-    > pred.LDAmodel.test <- ifelse(predPerc.LDAmodel.test > 0.5, 1, 0)
-    > table(pred.LDAmodel.test, test$Happy)
+    > predPerc.LDAmodel.initial_test <- predict(LDAmodel, newdata = initial_test)$posterior[ , 2]
+    > pred.LDAmodel.initial_test <- ifelse(predPerc.LDAmodel.initial_test > 0.5, 1, 0)
+    > table(pred.LDAmodel.initial_test, initial_test$Happy)
 
-    pred.LDAmodel.test   0   1
-		     0 244 141
-		     1 184 412
+    pred.LDAmodel.initial_test   0   1
+			     0 244 141
+			     1 184 412
 
 
 <h3>3. Clustering and Modeling</h3>
-One technique discussed for improving prediction accuracies is clustering and modeling. By clustering the training data, the prediction models deal with less variance and more similar data points, which purportedly improves accuracy.
+One technique that data scientists utilize to improve  prediction accuracies is clustering. By building prediction models on clustered data, prediction models deal with more similar data points, which can improve accuracy.
 
-CODE
+<h6>Dummy coding binary variables (to 0's and 1's)</h6>
+
+    > initial_train_test.dc <- initial_train_test
+    > for (i in c(3, 8:(ncol(initial_train_test)-2))) {  
+    +   initial_train_test.dc[[i]] <- as.integer(initial_train_test.dc[[i]]) - 1
+    + }
+    > colnames(initial_train_test.dc)[3] <- 'Male'
+
+<h6>Dummy coding categorical variables (to 0's and 1's)</h6>
+
+    > # dummy coding: Income
+    > dcIncome.df <- as.data.frame(model.matrix(~initial_train_test.dc$Income))[-1]
+    > colnames(dcIncome.df) <- c('inc.25001_50000', 'inc.50000_74999',
+    +                            'inc.75000_100000', 'inc.100001_150000',
+    +                            'inc.over.150000')
+    > head(dcIncome.df)
+      inc.25001_50000 inc.50000_74999 inc.75000_100000 inc.100001_150000 inc.over.150000
+    1               0               0                0                 1               0
+    2               1               0                0                 0               0
+    3               0               0                0                 1               0
+    4               0               0                1                 0               0
+    5               0               1                0                 0               0
+    6               0               0                0                 0               1
+    > initial_train_test.dc <- cbind(initial_train_test.dc, dcIncome.df)
+
+    > # dummy coding: HouseholdStatus
+    > dcHouseholdStatus.df <- as.data.frame(model.matrix(~initial_train_test.dc$HouseholdStatus))[-1]
+    > colnames(dcHouseholdStatus.df) <- c('Single.w.kids', 'DomParts.wo.kids', 
+    +                                     'DomParts.w.kids', 'Married.wo.kids', 
+    +                                     'Married.w.kids')
+    > head(dcHouseholdStatus.df)
+      Single.w.kids DomParts.wo.kids DomParts.w.kids Married.wo.kids Married.w.kids
+    1             0                0               1               0              0
+    2             0                0               0               1              0
+    3             0                0               1               0              0
+    4             0                0               0               1              0
+    5             0                0               0               1              0
+    6             0                0               0               1              0
+    > initial_train_test.dc <- cbind(initial_train_test.dc, dcHouseholdStatus.df)
+
+    > # dummy coding: EducationLevel
+    > dcEducation.df <- as.data.frame(model.matrix(~initial_train_test.dc$EducationLevel))[-1]
+    > colnames(dcEducation.df) <- c('edu.HS_diploma', 'edu.associate', 
+    +                               'edu.current_undergrad', 'edu.bachelor',
+    +                               'edu.master', 'edu.doctoral')
+    > head(dcEducation.df)
+      edu.HS_diploma edu.associate edu.current_undergrad edu.bachelor edu.master edu.doctoral
+    1              0             0                     0            0          0            0
+    2              0             0                     0            0          0            1
+    3              1             0                     0            0          0            0
+    4              0             0                     0            0          1            0
+    5              0             1                     0            0          0            0
+    6              0             0                     1            0          0            0
+    > initial_train_test.dc <- cbind(initial_train_test.dc, dcEducation.df)
+
+    > # dummy coding: Party
+    > dcParty.df <- as.data.frame(model.matrix(~initial_train_test.dc$Party))[-1]
+    > colnames(dcParty.df) <- c('party.independent', 'party.libertarian',
+    +                           'party.other', 'party.republican')
+    > head(dcParty.df)
+      party.independent party.libertarian party.other party.republican
+    1                 1                 0           0                0
+    2                 0                 0           0                0
+    3                 0                 0           0                1
+    4                 0                 0           0                1
+    5                 1                 0           0                0
+    6                 1                 0           0                0
+    > initial_train_test.dc <- cbind(initial_train_test.dc, dcParty.df)
+
+<h6>Removing categorical variables that have been dummy-coded</h6>
+
+    > initial_train_test.dc$Income <- NULL
+    > initial_train_test.dc$HouseholdStatus <- NULL
+    > initial_train_test.dc$EducationLevel <- NULL
+    > initial_train_test.dc$Party <- NULL
+
+<h6>Split the dummy-coded initial_train_test dataset into training and testing</h6>
+
+    > library(caTools)
+    > set.seed(123)
+    > split <- sample.split(initial_train_test.dc$Happy, SplitRatio=0.75)
+    > initial_train.dc <- initial_train_test.dc[split==TRUE, ]
+    > initial_test.dc <- initial_train_test.dc[split==FALSE, ]
+
+<h6>Normalize data</h6>
+
+    > initial_train.dc.dep <- subset(initial_train.dc, select = Happy)
+    > initial_train.dc.indep <- subset(initial_train.dc, select = - Happy)
+    > 
+    > initial_test.dc.dep <- subset(initial_test.dc, select = Happy)
+    > initial_test.dc.indep <- subset(initial_test.dc, select = - Happy)
+    > 
+    > library(caret)
+    > preproc <- preProcess(initial_train.dc.indep)
+    > initial_train.dc.indep.norm <- predict(preproc, initial_train.dc.indep)
+    > initial_test.dc.indep.norm <- predict(preproc, initial_test.dc.indep)
+    >
+    > initial_train.dc.norm <- cbind(initial_train.dc.dep, initial_train.dc.indep.norm)
+    > initial_test.dc.norm <- cbind(initial_test.dc.dep, initial_test.dc.indep.norm)
+
+<h3>Clustering</h3>
+
+<h6>Hierarchical clustering</h6>
+
+![Alt text](./figures/hClust.png)
+
+    > d.initial_train.dc.indep.norm <- dist(initial_train.dc.indep.norm, method='euclidean')
+    > hclust.initial_train <- hclust(d.initial_train.dc.indep.norm, method='ward')
+    > plot(hclust.initial_train)
+
+![Alt text](./figures/hClust_2.png)
+
+    > # 2-group clusters
+    > plot(hclust.initial_train)
+    > rect.hclust(hclust.initial_train, k=2)
+
+![Alt text](./figures/hClust_7.png)
+
+    > # 7-group clusters
+    > plot(hclust.initial_train)
+    > rect.hclust(hclust.initial_train, k=7)
+
+<h6>Problem with hierarchical clustering</h6>
+With the cluster-and-predict method, the goal is to create cluster groups in the training dataset and to assign new observersations in the test dataset to appropriately matching clusters. We do NOT want to run a separate cluster algorithm on the testing dataset (especially for k-means clustering method) because we may not know definitively which clusters from the training dataset correspond to which clusters in the testing dataset. Even if is possible, it would be very cumbersome and tedious to match clusters from the training set to those in the testing set, unless their cluster categorization value (e.g. 1, 2, 3, ...) has not changed. For example, Cluster 1 in the training dataset may be Cluster 3 in the testing dataset.
+
+After I decided on the number of clusters I wanted to split my data, decided to run the k-means algorithm instead of hierarchical. Let's just say the that hierarchical clustering method that I decribed above doesn't work so smoothly as it would if I used an alternative method: k-means clustering.
+
+<h6>Loading the <strong>flexclust</strong> library</h6>
+
+    > library(flexclust)
+
+<h6>Creating 2 cluster groups through k-means</h6>
+
+    > set.seed(123)
+    > km2 <- kmeans(initial_train.dc.indep.norm, center=2)
+    > km2.kcca <- as.kcca(km2, initial_train.dc.indep.norm)
+    > kClust.2Groups.initial_train <- km2$cluster
+    > kClust.2Groups.initial_test <- predict(km2.kcca, newdata = initial_test.dc.ind
+
+It was evident that Cluster 1 group was overall happier than Cluster 2.
+
+    > tapply(initial_train$Happy, kClust.2Groups.initial_train, mean)
+	    1         2 
+    0.6056838 0.5067621 
+
+In addition, Cluster 1 group was comprised of older poll respondents than was Cluster 2, both in the training and testing set.
+
+    > tapply(initial_train$Age, kClust.2Groups.initial_train, mean)
+	   1        2 
+    44.20959 22.27765 
+    > tapply(initial_test$Age, kClust.2Groups.initial_test, mean)
+	   1        2 
+    44.39821 22.32542 
+
+<h6>Split the training and testing datasets into clusters</h6>
+
+    > initial_train1 <- subset(initial_train, kClust.2Groups.initial_train==1)
+    > initial_train2 <- subset(initial_train, kClust.2Groups.initial_train==2)
+    > initial_test1 <- subset(initial_test, kClust.2Groups.initial_test==1)
+    > initial_test2 <- subset(initial_test, kClust.2Groups.initial_test==2)
+
+<h6>Building models on the clustered groups</h6>
+
+> set.seed(123)
+> RFmodel1 <- randomForest(Happy ~ ., data = initial_train1, ntree = 200)
+> RFmodel2 <- randomForest(Happy ~ ., data = initial_train2, ntree = 200)
+> 
+> ## on the initial_test set
+> # prediction probabilities
+> predPerc.RFmodel1.initial_test1 <- predict(RFmodel1, newdata = initial_test1, type = 'prob')[ , 2]
+> predPerc.RFmodel2.initial_test2 <- predict(RFmodel2, newdata = initial_test2, type = 'prob')[ , 2]
+> 
+> # predictions
+> pred.RFmodel1.initial_test1 <- as.integer(predPerc.RFmodel1.initial_test1 > 0.5)
+> pred.RFmodel2.initial_test2 <- as.integer(predPerc.RFmodel2.initial_test2 > 0.5)
+>
+> # accuracy
+> table(pred.RFmodel1.initial_test1, initial_test1$Happy)
+                           
+pred.RFmodel1.initial_test1   0   1
+                          0  87  41
+                          1 134 298
+> table(pred.RFmodel2.initial_test2, initial_test2$Happy)
+                           
+pred.RFmodel2.initial_test2   0   1
+                          0 131  58
+                          1  76 156
+
+Similarly, other models (logistic regression, LDA, and regression tree with 10-fold cross validation) were created and accuracies measured.
 
 <h3>4. Model Averaging</h3>
+
+
 
 
 <h3>5. Performance Overview</h3>

@@ -42,7 +42,7 @@ sigVarsT.initial_train <- findSigVariables(initial_train,
 nrow(sigVarsT.initial_train)   # 62 "significant" variables in the initial_train dataset
 
 sigVars <- sigVarsT.initial_train$sig.colname
-sigVars  
+sigVars 
 # obvious UserID is NOT one of the significant variables (because it's a unique ID for each observation)
 
 sigVars <- sigVars[-60]  # removing UserID

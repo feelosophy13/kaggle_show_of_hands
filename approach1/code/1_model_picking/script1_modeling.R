@@ -53,8 +53,13 @@ nrow(initial_test)
 
 
 
-#### simple baseline model
+#### since this is a classification problem...
+initial_train$Happy <- as.factor(initial_train$Happy)
+initial_test$Happy <- as.factor(initial_test$Happy)
 
+
+
+#### simple baseline model
 # accuracy if all predictions were 1 for train$Happy
 table(initial_train$Happy)
 1660 / (1286 + 1660)  # 56.35% accuracy on train
@@ -74,27 +79,6 @@ predPerc.logModel.initial_test <- predict(logModel, newdata = initial_test, type
 pred.logModel.initial_test <- ifelse(predPerc.logModel.initial_test > 0.5, 1, 0)
 table(pred.logModel.initial_test, initial_test$Happy)
 (242 + 410) / (242 + 143 + 186 + 410)  # 66.46% accuracy on test
-
-
-
-#### simple Random Forest
-library(randomForest)
-
-# changing the dependent variable to factor (as required for RF method)
-class(initial_train$Happy)
-initial_train$Happy <- as.factor(initial_train$Happy)
-initial_test$Happy <- as.factor(initial_test$Happy)
-
-# creating a random forest model
-?randomForest
-set.seed(123)
-RFmodel <- randomForest(Happy ~ ., data = initial_train, ntrees=200)
-
-# calculating the accuracy of RFmodel on test
-predPerc.RFmodel.initial_test <- predict(RFmodel, newdata = initial_test, type = 'prob')[ , 2]
-pred.RFmodel.initial_test <- ifelse(predPerc.RFmodel.initial_test > 0.5, 1, 0)
-table(pred.RFmodel.initial_test, initial_test$Happy)
-(209 + 454) / (209 + 99 + 219 + 454)  # 67.58% accuracy on test
 
 
 
@@ -119,10 +103,27 @@ CARTmodel <- rpart(Happy ~ ., data = initial_train, cp = 0.01)
 prp(CARTmodel)
 
 # calculating the accuracy of CARTmodel on test
-predPerc.CARTmodel.initial_test <- predict(CARTmodel, newdata = initial_test)
+
+predPerc.CARTmodel.initial_test <- predict(CARTmodel, newdata = initial_test)[ , 2]
 pred.CARTmodel.initial_test <- ifelse(predPerc.CARTmodel.initial_test > 0.5, 1, 0)
 table(pred.CARTmodel.initial_test, initial_test$Happy)
-(149 + 485) / (149 + 68 + 279 + 485)  # 64.62% accuray on test
+(183 + 453) / nrow(initial_test)  # 64.83% accuray on test
+
+
+
+#### simple Random Forest
+library(randomForest)
+
+# creating a random forest model
+?randomForest
+set.seed(123)
+RFmodel <- randomForest(Happy ~ ., data = initial_train, ntrees=200)
+
+# calculating the accuracy of RFmodel on test
+predPerc.RFmodel.initial_test <- predict(RFmodel, newdata = initial_test, type = 'prob')[ , 2]
+pred.RFmodel.initial_test <- ifelse(predPerc.RFmodel.initial_test > 0.5, 1, 0)
+table(pred.RFmodel.initial_test, initial_test$Happy)
+(209 + 454) / (209 + 99 + 219 + 454)  # 67.58% accuracy on test
 
 
 
@@ -151,3 +152,39 @@ pred.QDAmodel.initial_test <- ifelse(predPerc.QDAmodel.initial_test > 0.5, 1, 0)
 table(pred.QDAmodel.initial_test, initial_test$Happy)
 (224 + 354) / (224 + 199 + 204 + 354)  # 58.92% on test
 
+
+
+#### averaging prediction probabilities to make predictions
+
+## prediction percentages on initial_testing sets averaged across GLM, LDA, RF, and CART
+predPerc.averaged.initial_test <- (predPerc.logModel.initial_test + predPerc.LDAmodel.initial_test + 
+                                     predPerc.RFmodel.initial_test) / 3
+
+## predictions from averaged probabilities on initial_test sets
+pred.averaged.initial_test <- as.integer(predPerc.averaged.initial_test > 0.5)
+
+
+## accuracy on the initial_testing set
+table(pred.averaged.initial_test, initial_test$Happy)
+(244 + 424) / (244 + 129 + 184 + 424)
+# 68.09% accuracy on the initial_testing set
+
+
+
+#### selecing a more common prediction outcome to make predictions
+## first 10 predictions on initial_test
+head(pred.logModel.initial_test, 10)
+head(pred.LDAmodel.initial_test, 10)
+head(pred.RFmodel.initial_test, 10)
+
+## making predictions on the initial_test dataset
+predPerc.freq.initial_test <- (pred.logModel.initial_test + pred.LDAmodel.initial_test + 
+                                 pred.RFmodel.initial_test) / 3
+head(predPerc.freq.initial_test, 10)
+pred.freq.initial_test <- round(pred.freq.initial_test, 0)
+head(pred.freq.initial_test, 10)
+
+## accuracy on the initial_test dataset
+table(pred.freq.initial_test, initial_test$Happy)
+(221 + 447) / (221 + 106 + 207 + 447)
+# 68.09% accuracy on the initial_test data set

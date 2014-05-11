@@ -123,35 +123,19 @@ n * (n - 1) / 2
 # create hierarchical clustering and dendrogram
 d.initial_train.dc.indep.norm <- dist(initial_train.dc.indep.norm, method='euclidean')
 hclust.initial_train <- hclust(d.initial_train.dc.indep.norm, method='ward')
-plot(hclust.initial_train)  # two or three cluster groups seem ideal
+plot(hclust.initial_train)  # two cluster groups seem ideal
+rect.hclust(hclust.initial_train, k=2)
 dev.copy(png, '../figures/hClust.png')
 dev.off()
 
-# 2-group clusters
-rect.hclust(hclust.initial_train, k=2)
-dev.copy(png, '../figures/hClust_2.png')
-dev.off()
 
 hclust.2Groups.initial_train <- cutree(hclust.initial_train, k = 2)
 head(hclust.2Groups.initial_train)
 table(hclust.2Groups.initial_train)
 tapply(initial_train$Happy, hclust.2Groups.initial_train, mean)
 
-# 7-group clusters
-plot(hclust.initial_train)
-rect.hclust(hclust.initial_train, k=7)
-dev.copy(png, '../figures/hClust_7.png')
-dev.off()
-
-hclust.7Groups.initial_train <- cutree(hclust.initial_train, k = 7)
-head(hclust.7Groups.initial_train)
-table(hclust.7Groups.initial_train)
-tapply(initial_train$Happy, hclust.7Groups.initial_train, mean)
-
 # average happiness in initial_train
 mean(initial_train$Happy)
-
-
 
 
 
@@ -163,8 +147,8 @@ hclust.2Groups.initial_train.2 <- predict(hclust.2Groups.kcca)
 hclust.2Groups.initial_test <- predict(hclust.2Groups.kcca, newdata = initial_test.dc.indep.norm)
 
 table(hclust.2Groups.initial_train, hclust.2Groups.initial_train.2)
-229 + 85
-(229 + 85) / sum(table(hclust.2Groups.initial_train, hclust.2Groups.initial_train.2))  
-# 10.66% discrepancy between cluster results obtained by cutree() and predict(as.kcca()) on the initial_training dataset
+125 + 171
+(125 + 171) / sum(table(hclust.2Groups.initial_train, hclust.2Groups.initial_train.2))  
+# 10.04% discrepancy between cluster results obtained by cutree() and predict(as.kcca()) on the initial_training dataset
 
 # Will resort to k-means clustering method
