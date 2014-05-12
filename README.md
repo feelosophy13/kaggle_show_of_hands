@@ -38,7 +38,7 @@ The first few rows and columns of the sample data are shown below.
     6      8 1991 Female      under $25,000 Single (no kids) Current Undergraduate        <NA>     1     Yes     Yes      No    <NA>    <NA>    <NA>  Public
 
 A significant portion (about a quarter) of the data was missing (marked yellow).
-!Alttext(./figures/missingDataMap.png)
+![Alt text](./figures/missingDataMap.png)
 
 <h2>First Approach</h2>
 
@@ -261,7 +261,7 @@ We can make prediction models by selecting a more common prediction outcome for 
 
 This method, similar to averaging prediction probabilities, yielded 68.09% accuracy, which was higher than that of any single prediction model.  
 
-<h3>3. Clustering and Modeling</h3>
+<h3>3. Dummy-Coding and Normalization</h3>
 One technique that data scientists utilize to improve  prediction accuracies is clustering. By building prediction models on clustered data, prediction models deal with more similar data points, which can improve accuracy.
 
 <h6>Dummy coding binary variables (to 0's and 1's)</h6>
@@ -364,7 +364,7 @@ One technique that data scientists utilize to improve  prediction accuracies is 
     > initial_train.dc.norm <- cbind(initial_train.dc.dep, initial_train.dc.indep.norm)
     > initial_test.dc.norm <- cbind(initial_test.dc.dep, initial_test.dc.indep.norm)
 
-<h3>Clustering</h3>
+<h3>4. Clustering</h3>
 
 <h6>Hierarchical clustering</h6>
 
@@ -480,7 +480,7 @@ Similarly, other models (logistic regression, LDA, and regression tree with 10-f
     > head(pred.freqClust2.initial_test2, 10)
      [1] 1 1 1 1 0 0 1 0 0 1
 
-<h3>5. Performance Overview</h3>
+<h3>5. Model Performance Assessment</h3>
 <h6>No clustering</h6>
 <ul>
 <li>GLM accuracy: 66.46%</li>
@@ -740,15 +740,15 @@ Accuracy: 68.47%
 			 0 355 187
 			 1 250 594
 
-<h3>3. Selecting 17 most significant variables out of 61</h3>
+<h3>3. Selecting 17 most significant variables (out of 61)</h3>
 
 <h6>Plotting 25 important variables (according to random forest)</h6>
 
 ![Alt text](./figures/varImpPlot_25vars.png)
 
-> varImpPlot(RFmodel, n.var = 25, 
-+            main = 'Importance of Variables',
-+            cex = 0.7)  # cex controls the size of label texts
+    > varImpPlot(RFmodel, n.var = 25, 
+    +            main = 'Importance of Variables',
+    +            cex = 0.7)  # cex controls the size of label texts
 
 <h6>Pick the first 17 variables</h6>
 
@@ -876,19 +876,24 @@ Accuracy: 68.47%
 <h2>Conclusion</h2>
 There are several lessons I've learned from participating in this competition.<br />
 
-1. Do <strong>NOT</strong> always impute all missing values. Imputing missing values inevitably creates errors. If one tries to impute missing values in Column A, and impute missing values in Column B using A and other variables, the errors incurred from imputing Column A is going to propagate to Column B.<br />
+<strong>1. Imputing</strong>
+Do <strong>NOT</strong> always impute all missing values. Imputing missing values inevitably creates errors. If one tries to impute missing values in Column A, and impute missing values in Column B using A and other variables, the errors incurred from imputing Column A is going to propagate to Column B.<br />
 
 Therefore, the reasoning goes, one should impute for missing values only for:<br />
 a. The most important variables to your final model<br />
 b. The variables with the least number of missing values<br />
 c. The variables that you can impute with a minimal error<br />
 
-2. Do <strong>NOT</strong> put all independent variables when creating a prediction model. Pick out the most important variables by pre-selecting them. One can further remove variables by removing variables that are highly colinear (usually around r > 0.75). Another technique of selecting important variables for building prediction models is plotting their importance as recognized by random forest as we did above.
+<strong>2. Variable Selection</strong>
+Do <strong>NOT</strong> put all independent variables when creating a prediction model. Pick out the most important variables by pre-selecting them. One can further remove variables by removing variables that are highly colinear (usually around r > 0.75). Another technique of selecting important variables for building prediction models is plotting their importance as recognized by random forest as we did above.
 
-3. Clustering-and-prediction can actually decrease the accuracy rate, as we saw in our case. This could have been very well due to the fact we did not have enough observations to split our data into clusters. With less data in each cluster, we had less data with which we could train our models--therefore a drop in the accuracy of the models.
+<strong>3. Clustering</strong>
+Clustering can actually decrease the accuracy rate, as we saw in our case. This could have been very much due to the fact we did not have enough observations to create sizeable clusters. With less data in each cluster, we had less data with which we could train our models--therefore a drop in the accuracy of the models.
 
-4. Model averaging is a simple yet powerful technique. Instead of making predictions based on a single prediction model, one should combine outputs (whether they be actual predicted outcomes or prediction probabilities) from different prediction models. 
+<strong>4. Model Averaging</strong>
+Model averaging is a simple yet powerful technique. Instead of making predictions based on a single prediction model, one should combine outputs (whether they be actual predicted outcomes or prediction probabilities) from different prediction models. 
 
 This ensemble technique works best if models are vastly different each other. Averaging a pack of nearly identical models (logistic model with another logistic model, or random forest model with a regression tree model, etc.) will hardly improve the accuracy. 
 
-5. Most importantly, have fun. Kaggle is a great platform for data enthusiathiasts to practice, learn, and compete.
+<strong>5. Having Fun</strong>
+Most importantly, have fun. Kaggle is a great platform for data enthusiathiasts to practice, learn, and compete.
