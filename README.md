@@ -876,7 +876,7 @@ Accuracy: 68.47%
 <h2>Conclusion</h2>
 There are several lessons I've learned from participating in this competition.<br />
 
-<strong>1. Imputing</strong>
+<strong>1. Imputing</strong><br />
 Do <strong>NOT</strong> always impute all missing values. Imputing missing values inevitably creates errors. If one tries to impute missing values in Column A, and impute missing values in Column B using A and other variables, the errors incurred from imputing Column A is going to propagate to Column B.<br />
 
 Therefore, the reasoning goes, one should impute for missing values only for:<br />
@@ -884,16 +884,16 @@ a. The most important variables to your final model<br />
 b. The variables with the least number of missing values<br />
 c. The variables that you can impute with a minimal error<br />
 
-<strong>2. Variable Selection</strong>
+<strong>2. Variable Selection</strong><br />
 Do <strong>NOT</strong> put all independent variables when creating a prediction model. Pick out the most important variables by pre-selecting them. One can further remove variables by removing variables that are highly colinear (usually around r > 0.75). Another technique of selecting important variables for building prediction models is plotting their importance as recognized by random forest as we did above.
 
-<strong>3. Clustering</strong>
+<strong>3. Clustering</strong><br />
 Clustering can actually decrease the accuracy rate, as we saw in our case. This could have been very much due to the fact we did not have enough observations to create sizeable clusters. With less data in each cluster, we had less data with which we could train our models--therefore a drop in the accuracy of the models.
 
-<strong>4. Model Averaging</strong>
+<strong>4. Model Averaging</strong><br />
 Model averaging is a simple yet powerful technique. Instead of making predictions based on a single prediction model, one should combine outputs (whether they be actual predicted outcomes or prediction probabilities) from different prediction models. 
 
 This ensemble technique works best if models are vastly different each other. Averaging a pack of nearly identical models (logistic model with another logistic model, or random forest model with a regression tree model, etc.) will hardly improve the accuracy. 
 
-<strong>5. Having Fun</strong>
+<strong>5. Having Fun</strong><br />
 Most importantly, have fun. Kaggle is a great platform for data enthusiathiasts to practice, learn, and compete.

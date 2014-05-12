@@ -261,7 +261,7 @@ We can make prediction models by selecting a more common prediction outcome for 
 
 This method, similar to averaging prediction probabilities, yielded 68.09% accuracy, which was higher than that of any single prediction model.  
 
-<h3>3. Clustering and Modeling</h3>
+<h3>3. Dummy-Coding and Normalization</h3>
 One technique that data scientists utilize to improve  prediction accuracies is clustering. By building prediction models on clustered data, prediction models deal with more similar data points, which can improve accuracy.
 
 <h6>Dummy coding binary variables (to 0's and 1's)</h6>
@@ -364,7 +364,7 @@ One technique that data scientists utilize to improve  prediction accuracies is 
     > initial_train.dc.norm <- cbind(initial_train.dc.dep, initial_train.dc.indep.norm)
     > initial_test.dc.norm <- cbind(initial_test.dc.dep, initial_test.dc.indep.norm)
 
-<h3>Clustering</h3>
+<h3>4. Clustering</h3>
 
 <h6>Hierarchical clustering</h6>
 
@@ -480,7 +480,7 @@ Similarly, other models (logistic regression, LDA, and regression tree with 10-f
     > head(pred.freqClust2.initial_test2, 10)
      [1] 1 1 1 1 0 0 1 0 0 1
 
-<h3>5. Performance Overview</h3>
+<h3>5. Model Performance Assessment</h3>
 <h6>No clustering</h6>
 <ul>
 <li>GLM accuracy: 66.46%</li>
@@ -740,7 +740,7 @@ Accuracy: 68.47%
 			 0 355 187
 			 1 250 594
 
-<h3>3. Selecting 17 most significant variables out of 61</h3>
+<h3>3. Selecting 17 most significant variables (out of 61)</h3>
 
 <h6>Plotting 25 important variables (according to random forest)</h6>
 
